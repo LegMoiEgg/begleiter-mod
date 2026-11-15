@@ -176,7 +176,7 @@ public final class CompanionManager {
             case DOG -> "entity.wolf.pant";
             case RABBIT -> "entity.rabbit.jump";
             case FOX -> "entity.fox.ambient";
-            case HUMAN -> "entity.villager.yes";
+            case HUMAN -> "entity.experience_orb.pickup";
         };
         SoundEvent sound = BuiltInRegistries.SOUND_EVENT.getValue(Identifier.withDefaultNamespace(id));
         if (sound == null) {

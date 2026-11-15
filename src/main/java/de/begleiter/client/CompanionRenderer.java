@@ -36,6 +36,7 @@ final class CompanionRenderer {
     private final List<Display.BlockDisplay> displays = new ArrayList<>();
     private final Rigid[] rigids = new Rigid[Group.COUNT];
     private CompanionAvatar avatar;
+    private Display.BlockDisplay seat;
     private float avatarYaw;
     private CompanionModel model;
     private Level builtFor;
@@ -87,8 +88,13 @@ final class CompanionRenderer {
     /** Entfernt alle Entities (z. B. beim Verlassen der Welt oder wenn der Begleiter ausgeschaltet wird). */
     void discard() {
         if (avatar != null) {
+            avatar.stopRiding();
             avatar.discard();
             avatar = null;
+        }
+        if (seat != null) {
+            seat.discard();
+            seat = null;
         }
         for (Display.BlockDisplay d : displays) {
             d.discard();
@@ -110,7 +116,7 @@ final class CompanionRenderer {
     private boolean needsRebuild(Level level, BegleiterConfig cfg) {
         boolean human = cfg.animal() == AnimalType.HUMAN;
         if (human) {
-            return avatar == null || avatar.isRemoved() || builtFor != level || builtRevision != cfg.revision;
+            return avatar == null || avatar.isRemoved() || seat == null || seat.isRemoved() || builtFor != level || builtRevision != cfg.revision;
         }
         if (avatar != null) {
             return true;
@@ -142,6 +148,10 @@ final class CompanionRenderer {
                 scale.setBaseValue(model.hitHeight / 16.0 * cfg.size / 1.8);
             }
             avatarYaw = Float.NaN;
+            // Unsichtbarer "Sitz" (Block-Display ohne Block): wer darauf sitzt, bekommt die Sitzhaltung
+            seat = new Display.BlockDisplay(blockDisplayType(), clientLevel);
+            seat.setId(nextId--);
+            clientLevel.addEntity(seat);
             clientLevel.addEntity(avatar);
             builtFor = level;
             builtRevision = cfg.revision;
@@ -161,10 +171,25 @@ final class CompanionRenderer {
 
     /** Überträgt Position, Blickrichtung und Beschäftigung des Verhaltens auf das Spielermodell. */
     private void updateAvatar(CompanionBrain brain) {
-        if (avatar == null) {
+        if (avatar == null || seat == null) {
             return;
         }
-        avatar.setPos(brain.x, brain.y, brain.z);
+
+        // Sitzen: Das Modell sitzt auf dem unsichtbaren Sitz, dann nimmt es die Sitzhaltung eines Passagiers
+        // ein (Beine nach vorn). Der Sitz liegt auf Bodenhöhe; die Hüfte des Spielermodells liegt dann
+        // knapp darüber.
+        boolean sitting = brain.activity.isSitting() || brain.activity == de.begleiter.model.Activity.SLEEP;
+        if (sitting) {
+            seat.setPos(brain.x, brain.y, brain.z);
+            if (!avatar.isPassenger()) {
+                avatar.startRiding(seat, true, false);
+            }
+        } else {
+            if (avatar.isPassenger()) {
+                avatar.stopRiding();
+            }
+            avatar.setPos(brain.x, brain.y, brain.z);
+        }
 
         // Spielerblickrichtung: Yaw 0 = +Z, nach links (+X) = negativer Yaw. Winkel durchgehend halten,
         // damit es keinen Sprung bei +-180 Grad gibt.
@@ -179,11 +204,12 @@ final class CompanionRenderer {
         avatar.setYRot(avatarYaw);
         avatar.setYBodyRot(avatarYaw);
         avatar.setYHeadRot(headYaw);
-        avatar.setXRot((float) Math.toDegrees(brain.headPitchAngle()));
-
-        boolean resting = brain.activity.isSitting() || brain.activity == de.begleiter.model.Activity.SLEEP;
-        avatar.setShiftKeyDown(resting);
-
+        float pitch = (float) Math.toDegrees(brain.headPitchAngle());
+        if (brain.activity == de.begleiter.model.Activity.SLEEP) {
+            pitch = 45f; // schlafend: Kopf hängt nach unten
+        }
+        avatar.setXRot(pitch);
+        avatar.setShiftKeyDown(false);
     }
 
     @SuppressWarnings("unchecked")
