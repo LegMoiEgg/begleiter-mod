@@ -35,6 +35,8 @@ public final class CompanionManager {
     private static final LevelTerrain TERRAIN = new LevelTerrain();
     private static final Random RANDOM = new Random();
     private static Level lastLevel;
+    private static boolean wasUse;
+    private static long lastInteract = -100;
 
     private CompanionManager() {}
 
@@ -70,6 +72,14 @@ public final class CompanionManager {
             player.getYRot(), player.getXRot(), player.getEyeY(), cfg.animal());
         RENDERER.update(level, BRAIN, cfg);
 
+        // Ein Rechtsklick mit leerer Hand in die Luft löst in Minecraft kein Ereignis aus. Deshalb wird die
+        // Taste zusätzlich selbst abgefragt (die Ereignisse oben schlucken den Klick, wenn sie greifen).
+        boolean use = mc.options.keyUse.isDown();
+        if (use && !wasUse) {
+            interact(player, level);
+        }
+        wasUse = use;
+
         if (BRAIN.consumeTeleported()) {
             for (int i = 0; i < 6; i++) {
                 level.addParticle(ParticleTypes.POOF, BRAIN.x + (RANDOM.nextDouble() - 0.5) * 0.4,
@@ -87,22 +97,33 @@ public final class CompanionManager {
         if (!level.isClientSide() || hand != InteractionHand.MAIN_HAND) {
             return InteractionResult.PASS;
         }
+        return interact(player, level) ? InteractionResult.SUCCESS : InteractionResult.PASS;
+    }
+
+    /** Gemeinsame Logik für Klick-Ereignis und Tastenabfrage; gibt zurück, ob der Klick benutzt wurde. */
+    private static boolean interact(Player player, Level level) {
         BegleiterConfig cfg = BegleiterConfig.get();
         if (!cfg.enabled || !BRAIN.initialized || !player.getMainHandItem().isEmpty()) {
-            return InteractionResult.PASS;
+            return false;
         }
-        // Der Begleiter sitzt auf dem Kopf: Schleichen + steil nach oben schauen + Rechtsklick holt ihn herunter
+        long now = level.getGameTime();
+        if (now - lastInteract < 4) {
+            return false;
+        }
+        // Der Begleiter sitzt auf dem Kopf: Schleichen + Rechtsklick (leere Hand) holt ihn herunter
         if (BRAIN.command == CompanionBrain.Command.HEAD) {
-            if (player.isShiftKeyDown() && player.getXRot() < -60f) {
+            if (player.isShiftKeyDown()) {
+                lastInteract = now;
                 BRAIN.releaseHead();
                 playSound(level, cfg.animal(), 1.2f);
-                return InteractionResult.SUCCESS;
+                return true;
             }
-            return InteractionResult.PASS;
+            return false;
         }
         if (!isLookingAtCompanion(player, cfg)) {
-            return InteractionResult.PASS;
+            return false;
         }
+        lastInteract = now;
 
         AnimalType type = cfg.animal();
         double top = BRAIN.y + RENDERER.hitHeight(cfg);
@@ -125,7 +146,7 @@ public final class CompanionManager {
             }
             playSound(level, type, 1.0f);
         }
-        return InteractionResult.SUCCESS;
+        return true;
     }
 
     private static boolean isLookingAtCompanion(Player player, BegleiterConfig cfg) {

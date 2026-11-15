@@ -10,7 +10,7 @@ import java.util.List;
 public final class CompanionModel {
 
     /** Welche Farbe ein Quader bekommt. */
-    public enum Slot { PRIMARY, SECONDARY, DARK, INNER, SKIN, HAIR, SHIRT, PANTS, SHOE }
+    public enum Slot { PRIMARY, SECONDARY, DARK, INNER, SKIN, HAIR, HAIR_SIDE, SHIRT, PANTS, SHOE }
 
     public record Part(Group group, Slot slot, float x, float y, float z, float w, float h, float d) {}
 

@@ -36,6 +36,7 @@ public final class Palette {
             case INNER -> INNER_RGB;
             case SKIN -> skin != null ? skin[HumanSkin.SKIN] : 0xD9A98B;
             case HAIR -> skin != null ? skin[HumanSkin.HAIR] : 0x3B2A1E;
+            case HAIR_SIDE -> skin != null ? skin[HumanSkin.HAIR_SIDE] : 0x3B2A1E;
             case SHIRT -> skin != null ? skin[HumanSkin.SHIRT] : RGB[wrap(primary)];
             case PANTS -> skin != null ? skin[HumanSkin.PANTS] : RGB[wrap(secondary)];
             case SHOE -> skin != null ? skin[HumanSkin.SHOE] : 0x3A3A3A;

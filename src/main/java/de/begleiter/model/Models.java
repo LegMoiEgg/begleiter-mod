@@ -2,6 +2,7 @@ package de.begleiter.model;
 
 import static de.begleiter.model.CompanionModel.Slot.DARK;
 import static de.begleiter.model.CompanionModel.Slot.HAIR;
+import static de.begleiter.model.CompanionModel.Slot.HAIR_SIDE;
 import static de.begleiter.model.CompanionModel.Slot.INNER;
 import static de.begleiter.model.CompanionModel.Slot.PANTS;
 import static de.begleiter.model.CompanionModel.Slot.PRIMARY;
@@ -216,7 +217,8 @@ public final class Models {
             // Kopf mit Haaren (oben, hinten, Pony) und Augen
             .box(HEAD, SKIN, -2, 12, -2, 4, 4, 4)
             .box(HEAD, HAIR, -2.1f, 15.2f, -2.1f, 4.2f, 1, 4.2f)
-            .box(HEAD, HAIR, -2.1f, 12, -2.1f, 4.2f, 3.3f, 1)
+            .box(HEAD, HAIR_SIDE, -2.1f, 12, -2.1f, 4.2f, 3.3f, 1)
+            .mirrored(HEAD, HEAD, HAIR_SIDE, 1.9f, 13.3f, -2.1f, 0.3f, 2.2f, 3.8f)
             .box(HEAD, HAIR, -2.05f, 14.3f, 1.7f, 4.1f, 0.9f, 0.4f)
             .mirrored(HEAD, HEAD, DARK, 0.6f, 13.3f, 2f, 0.9f, 0.9f, 0.25f)
             // Arme: Ärmel und Hand

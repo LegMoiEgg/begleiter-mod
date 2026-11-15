@@ -8,7 +8,7 @@ import java.awt.image.BufferedImage;
  * Hose, Schuhe) heruntergerechnet.
  */
 public final class HumanSkin {
-    public static final int SKIN = 0, HAIR = 1, SHIRT = 2, PANTS = 3, SHOE = 4;
+    public static final int SKIN = 0, HAIR = 1, SHIRT = 2, PANTS = 3, SHOE = 4, HAIR_SIDE = 5;
 
     private static volatile int[] colors;
 
@@ -28,12 +28,14 @@ public final class HumanSkin {
         if (img == null || img.getWidth() != 64 || (img.getHeight() != 64 && img.getHeight() != 32)) {
             return null;
         }
-        int[] out = new int[5];
-        out[SKIN] = average(img, 9, 12, 14, 14, 0xD9A98B);   // untere Gesichtshälfte (Nase/Mund-Bereich)
-        out[HAIR] = average(img, 8, 0, 15, 7, 0x3B2A1E);     // Kopfoberseite
-        out[SHIRT] = average(img, 21, 21, 26, 30, 0x2F9FB0); // Oberkörper vorne
-        out[PANTS] = average(img, 4, 22, 7, 28, 0x3A4A9A);   // Bein vorne
-        out[SHOE] = average(img, 4, 30, 7, 31, 0x3A3A3A);    // Schuhbereich
+        int[] out = new int[6];
+        // Median statt Mittelwert: einzelne Ausreißer (Augen, Mund, Strähnen) verfälschen die Farbe nicht
+        out[SKIN] = median(img, 9, 12, 14, 15, 0xD9A98B);    // untere Gesichtshälfte (Wangen/Kinn)
+        out[HAIR] = median(img, 8, 0, 15, 7, 0x3B2A1E);      // Kopfoberseite
+        out[HAIR_SIDE] = median(img, 24, 8, 31, 11, 0x3B2A1E); // Hinterkopf (obere Hälfte), für Seiten und Rücken
+        out[SHIRT] = average(img, 21, 21, 26, 30, 0x2F9FB0);  // Oberkörper vorne
+        out[PANTS] = average(img, 4, 22, 7, 28, 0x3A4A9A);    // Bein vorne
+        out[SHOE] = average(img, 4, 30, 7, 31, 0x3A3A3A);     // Schuhbereich
         return out;
     }
 
@@ -55,5 +57,31 @@ public final class HumanSkin {
             return fallback;
         }
         return (int) (r / n) << 16 | (int) (g / n) << 8 | (int) (b / n);
+    }
+
+    /** Kanalweiser Median der nicht durchsichtigen Pixel. */
+    private static int median(BufferedImage img, int x1, int y1, int x2, int y2, int fallback) {
+        java.util.List<Integer> rs = new java.util.ArrayList<>();
+        java.util.List<Integer> gs = new java.util.ArrayList<>();
+        java.util.List<Integer> bs = new java.util.ArrayList<>();
+        for (int y = y1; y <= y2 && y < img.getHeight(); y++) {
+            for (int x = x1; x <= x2; x++) {
+                int argb = img.getRGB(x, y);
+                if ((argb >>> 24) < 128) {
+                    continue;
+                }
+                rs.add((argb >> 16) & 255);
+                gs.add((argb >> 8) & 255);
+                bs.add(argb & 255);
+            }
+        }
+        if (rs.isEmpty()) {
+            return fallback;
+        }
+        java.util.Collections.sort(rs);
+        java.util.Collections.sort(gs);
+        java.util.Collections.sort(bs);
+        int m = rs.size() / 2;
+        return rs.get(m) << 16 | gs.get(m) << 8 | bs.get(m);
     }
 }

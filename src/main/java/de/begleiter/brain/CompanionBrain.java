@@ -291,6 +291,15 @@ public final class CompanionBrain {
         pose.lerpTo(target, 0.3f);
     }
 
+    /** Kopfdrehung relativ zum Körper (Radiant, positiv = nach links) und Kopfneigung (positiv = nach unten). */
+    public float headYawAngle() {
+        return headYaw;
+    }
+
+    public float headPitchAngle() {
+        return headPitch;
+    }
+
     /** Streicheln: Freudensprung, Schwanzwedeln; nach mehrmaligem Streicheln eine Drehung. */
     public void pet() {
         happy = 1f;

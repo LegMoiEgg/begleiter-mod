@@ -11,7 +11,11 @@ import de.begleiter.model.Models;
 import de.begleiter.model.Rigid;
 import java.util.ArrayList;
 import java.util.List;
+import de.begleiter.model.AnimalType;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Display;
@@ -32,6 +36,9 @@ final class CompanionRenderer {
 
     private final List<Display.BlockDisplay> displays = new ArrayList<>();
     private final Rigid[] rigids = new Rigid[Group.COUNT];
+    private CompanionAvatar avatar;
+    private float avatarYaw;
+    private int avatarTicks;
     private CompanionModel model;
     private Level builtFor;
     private int builtRevision = -1;
@@ -39,6 +46,10 @@ final class CompanionRenderer {
     void update(Level level, CompanionBrain brain, BegleiterConfig cfg) {
         if (needsRebuild(level, cfg)) {
             rebuild(level, cfg);
+        }
+        if (cfg.animal() == AnimalType.HUMAN) {
+            updateAvatar(brain);
+            return;
         }
         if (model == null || displays.isEmpty()) {
             return;
@@ -77,6 +88,10 @@ final class CompanionRenderer {
 
     /** Entfernt alle Entities (z. B. beim Verlassen der Welt oder wenn der Begleiter ausgeschaltet wird). */
     void discard() {
+        if (avatar != null) {
+            avatar.discard();
+            avatar = null;
+        }
         for (Display.BlockDisplay d : displays) {
             d.discard();
         }
@@ -95,6 +110,13 @@ final class CompanionRenderer {
     }
 
     private boolean needsRebuild(Level level, BegleiterConfig cfg) {
+        boolean human = cfg.animal() == AnimalType.HUMAN;
+        if (human) {
+            return avatar == null || avatar.isRemoved() || builtFor != level || builtRevision != cfg.revision;
+        }
+        if (avatar != null) {
+            return true;
+        }
         if (displays.isEmpty() || builtFor != level || builtRevision != cfg.revision) {
             return true;
         }
@@ -112,6 +134,21 @@ final class CompanionRenderer {
             return;
         }
         model = Models.of(cfg.animal());
+        if (cfg.animal() == AnimalType.HUMAN) {
+            avatar = new CompanionAvatar(clientLevel);
+            avatar.setCustomSkin(SkinTextures.get(cfg.skinPath));
+            avatar.setId(nextId--);
+            AttributeInstance scale = avatar.getAttribute(Attributes.SCALE);
+            if (scale != null) {
+                // Spielerhöhe 1,8 Blöcke auf die Höhe des Modells herunterskalieren
+                scale.setBaseValue(model.hitHeight / 16.0 * cfg.size / 1.8);
+            }
+            avatarYaw = Float.NaN;
+            clientLevel.addEntity(avatar);
+            builtFor = level;
+            builtRevision = cfg.revision;
+            return;
+        }
         for (CompanionModel.Part part : model.parts) {
             Display.BlockDisplay display = new Display.BlockDisplay(blockDisplayType(), clientLevel);
             ((BlockDisplayAccessor) (Object) display).begleiter$setBlockState(
@@ -122,6 +159,38 @@ final class CompanionRenderer {
         }
         builtFor = level;
         builtRevision = cfg.revision;
+    }
+
+    /** Überträgt Position, Blickrichtung und Beschäftigung des Verhaltens auf das Spielermodell. */
+    private void updateAvatar(CompanionBrain brain) {
+        if (avatar == null) {
+            return;
+        }
+        avatar.setPos(brain.x, brain.y, brain.z);
+
+        // Spielerblickrichtung: Yaw 0 = +Z, nach links (+X) = negativer Yaw. Winkel durchgehend halten,
+        // damit es keinen Sprung bei +-180 Grad gibt.
+        float target = (float) -Math.toDegrees(brain.facing);
+        if (Float.isNaN(avatarYaw)) {
+            avatarYaw = target;
+        } else {
+            float diff = ((target - avatarYaw) % 360f + 540f) % 360f - 180f;
+            avatarYaw += diff;
+        }
+        float headYaw = avatarYaw - (float) Math.toDegrees(brain.headYawAngle());
+        avatar.setYRot(avatarYaw);
+        avatar.setYBodyRot(avatarYaw);
+        avatar.setYHeadRot(headYaw);
+        avatar.setXRot((float) Math.toDegrees(brain.headPitchAngle()));
+
+        boolean resting = brain.activity.isSitting() || brain.activity == de.begleiter.model.Activity.SLEEP;
+        avatar.setShiftKeyDown(resting);
+
+        avatarTicks++;
+        boolean cheering = brain.activity == de.begleiter.model.Activity.PLAY || brain.happy > 0.5f;
+        if (cheering && avatarTicks % 8 == 0) {
+            avatar.swing(InteractionHand.MAIN_HAND);
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -53,7 +53,7 @@ final class BlockPalette {
             case SECONDARY -> lookup(CONCRETE[Palette.wrap(secondary)] + "_concrete");
             case DARK -> lookup("black_concrete");
             case INNER -> lookup("pink_concrete");
-            case SKIN, HAIR, SHIRT, PANTS, SHOE -> lookup(nearest(Palette.rgb(slot, primary, secondary)));
+            case SKIN, HAIR, HAIR_SIDE, SHIRT, PANTS, SHOE -> lookup(nearest(Palette.rgb(slot, primary, secondary)));
         };
     }
 
