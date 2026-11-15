@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import de.begleiter.model.AnimalType;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -38,7 +37,6 @@ final class CompanionRenderer {
     private final Rigid[] rigids = new Rigid[Group.COUNT];
     private CompanionAvatar avatar;
     private float avatarYaw;
-    private int avatarTicks;
     private CompanionModel model;
     private Level builtFor;
     private int builtRevision = -1;
@@ -186,11 +184,6 @@ final class CompanionRenderer {
         boolean resting = brain.activity.isSitting() || brain.activity == de.begleiter.model.Activity.SLEEP;
         avatar.setShiftKeyDown(resting);
 
-        avatarTicks++;
-        boolean cheering = brain.activity == de.begleiter.model.Activity.PLAY || brain.happy > 0.5f;
-        if (cheering && avatarTicks % 8 == 0) {
-            avatar.swing(InteractionHand.MAIN_HAND);
-        }
     }
 
     @SuppressWarnings("unchecked")
