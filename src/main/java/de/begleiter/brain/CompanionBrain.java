@@ -29,6 +29,8 @@ public final class CompanionBrain {
     /** Größenfaktor des Begleiters (für Kollisionsmaße). */
     public float scale = 1f;
     public boolean swimming;
+    /** Neigung nach vorn/hinten in Radiant (auf dem Kopf: folgt der Kopfneigung des Spielers). */
+    public float tilt;
     public boolean initialized;
     public float happy;
 
@@ -65,6 +67,7 @@ public final class CompanionBrain {
         sitCommand = false;
         command = Command.FREE;
         swimming = false;
+        tilt = 0;
         groundedTicks = 0;
         vMismatchTicks = 0;
         happy = 0;
@@ -129,9 +132,16 @@ public final class CompanionBrain {
             if (terrain.clearance(px, pHeadTop, pz, r, h)) {
                 sitCommand = true;
                 swimming = false;
-                x = px;
-                y = pHeadTop;
-                z = pz;
+                // Der Begleiter sitzt auf der Kopfoberseite und bewegt sich mit: Schaut der Spieler nach oben,
+                // wandert er mit der Oberseite nach hinten (und kippt mit), nach unten höchstens leicht nach vorn.
+                double th = Math.toRadians(Math.max(-90.0, Math.min(15.0, pPitch)));
+                double yr = Math.toRadians(pYaw);
+                double pivotY = pEyeY - 0.12;
+                double off = Math.max(0.1, pHeadTop - pivotY);
+                x = px + (-Math.sin(yr) * Math.sin(th)) * off;
+                y = pivotY + Math.cos(th) * off;
+                z = pz + (Math.cos(yr) * Math.sin(th)) * off;
+                tilt = (float) th;
                 vy = 0;
                 onGround = true;
                 curSpeed = 0;
@@ -355,6 +365,9 @@ public final class CompanionBrain {
         stillTicks = moving ? 0 : stillTicks + 1;
         afkTicks = (moving || rotated) ? 0 : afkTicks + 1;
 
+        if (command != Command.HEAD) {
+            tilt *= 0.6f;
+        }
         if (swimming && !sitCommand) {
             if (activity != Activity.FOLLOW) {
                 setActivity(Activity.FOLLOW, 0);

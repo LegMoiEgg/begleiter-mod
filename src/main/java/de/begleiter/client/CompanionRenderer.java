@@ -38,6 +38,7 @@ final class CompanionRenderer {
     private CompanionAvatar avatar;
     private Display.BlockDisplay seat;
     private float avatarYaw;
+    private double prevX = Double.NaN, prevZ;
     private CompanionModel model;
     private Level builtFor;
     private int builtRevision = -1;
@@ -61,6 +62,11 @@ final class CompanionRenderer {
         root.qy = (float) Math.sin(brain.facing * 0.5f);
         root.qw = (float) Math.cos(brain.facing * 0.5f);
         float[] rootQ = {root.qx, root.qy, root.qz, root.qw};
+        // Neigung (z. B. auf dem Kopf des Spielers) um die Querachse des Tieres, vor der Blickrichtung
+        Rigid tiltRot = new Rigid();
+        tiltRot.qx = (float) Math.sin(brain.tilt * 0.5f);
+        tiltRot.qw = (float) Math.cos(brain.tilt * 0.5f);
+        float[] tiltQ = {tiltRot.qx, tiltRot.qy, tiltRot.qz, tiltRot.qw};
 
         for (int i = 0; i < displays.size(); i++) {
             CompanionModel.Part part = model.parts.get(i);
@@ -69,9 +75,10 @@ final class CompanionRenderer {
             // Eckpunkt (min) des Quaders durch Gruppen- und Blickrichtungs-Drehung
             float[] corner = {part.x(), part.y(), part.z()};
             g.apply(corner);
+            tiltRot.rotate(corner);
             root.rotate(corner);
 
-            float[] q = Rigid.mul(rootQ, new float[] {g.qx, g.qy, g.qz, g.qw});
+            float[] q = Rigid.mul(rootQ, Rigid.mul(tiltQ, new float[] {g.qx, g.qy, g.qz, g.qw}));
 
             Transformation transformation = new Transformation(
                 new Vector3f(corner[0] * k, corner[1] * k, corner[2] * k),
@@ -148,6 +155,7 @@ final class CompanionRenderer {
                 scale.setBaseValue(model.hitHeight / 16.0 * cfg.size / 1.8);
             }
             avatarYaw = Float.NaN;
+            prevX = Double.NaN;
             // Unsichtbarer "Sitz" (Block-Display ohne Block): wer darauf sitzt, bekommt die Sitzhaltung
             seat = new Display.BlockDisplay(blockDisplayType(), clientLevel);
             seat.setId(nextId--);
@@ -179,8 +187,10 @@ final class CompanionRenderer {
         // ein (Beine nach vorn). Der Sitz liegt auf Bodenhöhe; die Hüfte des Spielermodells liegt dann
         // knapp darüber.
         boolean sitting = brain.activity.isSitting() || brain.activity == de.begleiter.model.Activity.SLEEP;
+        // Auf dem Kopf sitzt das Spielermodell etwas höher, damit die Beine nicht im Kopf stecken
+        double raise = brain.command == CompanionBrain.Command.HEAD ? 0.10 : 0.0;
         if (sitting) {
-            seat.setPos(brain.x, brain.y, brain.z);
+            seat.setPos(brain.x, brain.y + raise, brain.z);
             if (!avatar.isPassenger()) {
                 avatar.startRiding(seat, true, false);
             }
@@ -190,6 +200,12 @@ final class CompanionRenderer {
             }
             avatar.setPos(brain.x, brain.y, brain.z);
         }
+
+        // Laufanimation: Das Modell wird nicht von Minecraft bewegt, also geben wir die Geschwindigkeit vor
+        double moved = Double.isNaN(prevX) ? 0 : Math.hypot(brain.x - prevX, brain.z - prevZ);
+        prevX = brain.x;
+        prevZ = brain.z;
+        avatar.walkAnimation.setSpeed(sitting ? 0f : (float) Math.min(moved * 4.0, 1.0));
 
         // Spielerblickrichtung: Yaw 0 = +Z, nach links (+X) = negativer Yaw. Winkel durchgehend halten,
         // damit es keinen Sprung bei +-180 Grad gibt.
