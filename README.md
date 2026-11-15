@@ -14,7 +14,7 @@ auch auf Servern.
 - **Platz / Kopf / Komm:** Schleichen + Rechtsklick mit leerer Hand auf den Begleiter. Reihenfolge: Platz
   (bleibt sitzen), dann Kopf (sitzt auf deinem Kopf), dann Komm (läuft wieder frei). Vom Kopf holst du ihn
   herunter, indem du schleichst, steil nach oben schaust und Rechtsklick machst.
-- **Kleiner Mensch:** Im Menü „Mensch“ wählen. Eine Skin-PNG (64x64) ins Menüfenster ziehen. Ein echter Skin
+- **Kleiner Mensch:** Im Menü „Mensch“ wählen. Die Skin-PNG (64x64) als `begleiter-skin.png` in den `config`-Ordner deines Profils legen und im Menü „Skin laden“ klicken (Ziehen ins Fenster geht, falls es die Version unterstützt). Ein echter Skin
   lässt sich auf Block-Quader nicht als Textur legen, deshalb werden Hautfarbe, Haare, Oberteil, Hose und
   Schuhe aus der Datei als Blockfarben übernommen.
 - **Teleport:** Nur wenn du festen Boden unter den Füßen hast (nicht beim Klettern, Fallen oder Elytra-Fliegen).

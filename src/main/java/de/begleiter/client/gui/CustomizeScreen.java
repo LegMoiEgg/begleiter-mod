@@ -98,10 +98,29 @@ public class CustomizeScreen extends Screen {
         this.addRenderableWidget(Button.builder(Component.literal("Fertig"), b -> this.onClose())
             .bounds(colX + half + 4, y, half, 20).build());
         y += 24;
+        this.addRenderableWidget(Button.builder(Component.literal("Skin laden"), b -> reloadSkin())
+            .bounds(colX, y, half, 20).build());
         this.addRenderableWidget(Button.builder(Component.literal("Skin entfernen"), b -> {
             cfg.setSkin("");
             status = "Skin entfernt";
-        }).bounds(colX, y, total, 20).build());
+        }).bounds(colX + half + 4, y, half, 20).build());
+    }
+
+    /** Lädt config/begleiter-skin.png (die Datei, die man selbst in den config-Ordner legt). */
+    private void reloadSkin() {
+        Path file = FabricLoader.getInstance().getConfigDir().resolve("begleiter-skin.png");
+        if (!Files.isRegularFile(file)) {
+            status = "Nicht gefunden: config/begleiter-skin.png";
+            return;
+        }
+        cfg.setSkin(file.toString());
+        if (HumanSkin.colors() == null) {
+            status = "Kein gültiger Skin (64x64 oder 64x32 PNG nötig)";
+            return;
+        }
+        cfg.setAnimal(AnimalType.HUMAN);
+        BegleiterConfig.save();
+        status = "Skin geladen";
     }
 
     /**
@@ -200,7 +219,7 @@ public class CustomizeScreen extends Screen {
         drawPreview(graphics, dt);
 
         if (human) {
-            String line = skin ? "Eigener Skin aktiv (Farben aus der Datei)" : "Skin-PNG (64x64) in dieses Fenster ziehen";
+            String line = skin ? "Eigener Skin aktiv (Farben aus der Datei)" : "Skin als config/begleiter-skin.png ablegen, dann \"Skin laden\"";
             graphics.text(this.font, line, 22, this.height - 46, 0xFFFFFF77, false);
         }
         if (!status.isEmpty()) {

@@ -67,6 +67,8 @@ public final class CompanionModel {
         private final AnimalType type;
         private final List<Part> parts = new ArrayList<>();
         private final float[][] pivots = new float[Group.COUNT][3];
+        /** Kopfgröße im Verhältnis zum Körper (1 = normal, 1.5 = Baby-Look). */
+        private float headScale = 1.5f;
         private float hitRadius = 6, hitHeight = 13, legH = 4, sitDrop = 3, sitPitch = 0.3f, tailRaise = 0.5f;
 
         private Builder(AnimalType type) {
@@ -102,8 +104,45 @@ public final class CompanionModel {
             return this;
         }
 
+        public Builder headScale(float value) {
+            this.headScale = value;
+            return this;
+        }
+
         public CompanionModel build() {
+            scaleHead();
             return new CompanionModel(this);
+        }
+
+        /**
+         * Vergrößert Kopf und Ohren um den Halsansatz (Pivot des Kopfes), damit die Tiere einen
+         * Baby-Kopf bekommen. Ohren sitzen am Kopf und wandern deshalb mit.
+         */
+        private void scaleHead() {
+            float k = headScale;
+            if (Math.abs(k - 1f) < 0.001f) {
+                return;
+            }
+            float[] hp = pivots[Group.HEAD.ordinal()];
+            float headTop = 0;
+            for (int i = 0; i < parts.size(); i++) {
+                Part p = parts.get(i);
+                if (p.group() == Group.HEAD || p.group() == Group.EAR_L || p.group() == Group.EAR_R) {
+                    Part q = new Part(p.group(), p.slot(),
+                        hp[0] + (p.x() - hp[0]) * k, hp[1] + (p.y() - hp[1]) * k, hp[2] + (p.z() - hp[2]) * k,
+                        p.w() * k, p.h() * k, p.d() * k);
+                    parts.set(i, q);
+                    headTop = Math.max(headTop, q.y() + q.h());
+                }
+            }
+            for (Group g : new Group[] {Group.EAR_L, Group.EAR_R}) {
+                float[] pv = pivots[g.ordinal()];
+                pv[0] = hp[0] + (pv[0] - hp[0]) * k;
+                pv[1] = hp[1] + (pv[1] - hp[1]) * k;
+                pv[2] = hp[2] + (pv[2] - hp[2]) * k;
+            }
+            hitHeight = Math.max(hitHeight, headTop + 0.5f);
+            hitRadius = hitRadius * (1f + (k - 1f) * 0.4f);
         }
     }
 }
