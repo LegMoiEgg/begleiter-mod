@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "de.begleiter.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "TitleScreenMixin",
+    "PauseScreenMixin",
+    "DisplayAccessor",
+    "BlockDisplayAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
